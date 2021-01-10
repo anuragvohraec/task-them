@@ -35,7 +35,7 @@ export interface TaskRunnerEntry{
     /**
      * if set true task will no more be picked. Its set as true on failed or complete.
      */
-    ended:boolean;
+    ended:"true"|"false";
 
 
     init_phase:string;

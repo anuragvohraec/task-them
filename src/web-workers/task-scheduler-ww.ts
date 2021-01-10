@@ -21,11 +21,11 @@ class TaskScheduler{
                     const new_state: TASK_STATE = data.state;
                     await TaskScheduler.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
                         if(ENDING_STATE.has(new_state)){
-                            oldObject.ended=true;
+                            oldObject.ended="true";
                         }
-                        const now = Date.now();
+                        const now = new Date().getTime();
                         oldObject.updated_date=now;
-                        oldObject.updates_logs[now]=`STATE CHANGED: from<${oldObject.current_state_of_task}> to:${new_state}`;
+                        oldObject.updates_logs[now]=`STATE CHANGED: ${new_state} , from: <${oldObject.current_state_of_task}>`;
                         oldObject.current_state_of_task=new_state;
                         
                         return oldObject;
@@ -39,9 +39,9 @@ class TaskScheduler{
                     const new_phase_data:any = data.phase_data;
 
                     await TaskScheduler.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
-                        const now = Date.now();
+                        const now = new Date().getTime();
                         oldObject.updated_date=now;
-                        oldObject.updates_logs[now]=`PHASE CHANGED: from<${oldObject.current_phase_data}> to:${new_phase}`;
+                        oldObject.updates_logs[now]=`PHASE CHANGED: ${new_phase} , from: <${oldObject.current_phase}>`;
                         oldObject.current_state_of_task="CONTINUE";
                         oldObject.current_phase=new_phase;
                         oldObject.current_phase_data=new_phase_data;
@@ -68,7 +68,8 @@ class TaskScheduler{
 
                     const now = new Date().getTime();
                     const updates_logs:UpdateLogs={};
-                    updates_logs[now]="INIT";
+                    updates_logs[now]="STATE CHANGED: INIT";
+                    updates_logs[now+1]=`PHASE CHANGED: ${init_phase}`;
 
                     const _id= await RandoEngine.getuuid();
                     const te: TaskRunnerEntry={
@@ -78,7 +79,7 @@ class TaskScheduler{
                         current_phase:init_phase,
                         current_phase_data:init_phase_data,
                         current_state_of_task:"INIT",
-                        ended:false,
+                        ended:"false",
                         updated_date:now,
                         updates_logs
                     }
@@ -94,7 +95,7 @@ class TaskScheduler{
 
     static async init(){
         //query database for all task where ended=false and 
-        const found_te: TaskRunnerEntry[]=await TaskScheduler.dao.find(dbname,"ended",false);
+        const found_te: TaskRunnerEntry[]=await TaskScheduler.dao.find(dbname,"ended","false");
         if(found_te.length>0){
             found_te.sort((a,b)=>{
                 return a.created_date-b.created_date;

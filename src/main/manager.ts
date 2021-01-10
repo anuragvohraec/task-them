@@ -1,13 +1,8 @@
 import { Task } from "./task";
 import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE} from '../lib';
 
-export  interface TaskExtensionType{
-    new(): Task
-}
-
-
 export class TaskManager{
-    private static taskReg:{[task_name:string]:TaskExtensionType}
+    private static taskReg:{[task_name:string]:typeof Task}={};
     private static initCalled=false;
     private static worker:Worker;
 
@@ -16,7 +11,7 @@ export class TaskManager{
      * @param taskClass 
      * @param task_name : Default value will be Class.name 
      */
-    static registerTaskClass<T extends Task>(taskClass: TaskExtensionType, task_name?:string){
+    static registerTaskClass(taskClass: typeof Task, task_name?:string){
         if(!task_name){
             task_name=taskClass.name;
         }
