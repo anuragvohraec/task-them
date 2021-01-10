@@ -2,7 +2,7 @@ const path = require('path');
 
 module.exports = {
   entry: {
-      bundle: './src/main/index.ts',
+      taskthemmain: './src/main/index.ts',
       taskthemwebworker:'./src/web-workers/task-scheduler-ww.ts'
   },
   devtool: 'inline-source-map',

@@ -45,3 +45,7 @@ theme monospace
 
 ## Sequence Diagram
 ![Seq Diagram](./des/SequenceDiagram.svg)
+
+## TODO 
+* Force overwrite "TASK_STATE:ONCE_IN_LIFE"
+* cron
