@@ -39,11 +39,7 @@ export class TaskManager{
                                 }else{
                                     const task:Task = Reflect.construct(this.taskReg[task_name],[]);
                                     const p = await task._execute(t._id,t.task_name,t.task_desc,t.current_state_of_task,t.current_phase,t.current_phase_data);
-                                    if(p){
-                                        this.change_task_state(t._id,"COMPLETED");
-                                    }else{
-                                        this.change_task_state(t._id,"FAILED");
-                                    }
+                                    this.change_task_state(t._id,p);
                                 }
                             }catch(e){
                                 console.warn(`Very bad Task ${task_name}! Your must catch all your exception in your run method!`);

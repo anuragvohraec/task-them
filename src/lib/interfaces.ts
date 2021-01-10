@@ -7,7 +7,7 @@ export type TASK_BEHAVIOR = "WILL_QUEUE"|"ONLY_ONCE_IN_LIFE";
  * This state is used by the Task runner to check which task needs to be picked. For example:
  * * COMPLETED: means that all went good as desired. Completed task are not picked up again.
  * * FAILED: Means that task is in state of no recovery and has failed.
- * 
+ * * CONTINUE: means you will want to continue the task next time (this task is made to run during init process of scheduler), but stop it as of now.
  */
 export type TASK_STATE="INIT"|"CONTINUE"|"COMPLETED"|"FAILED";
 

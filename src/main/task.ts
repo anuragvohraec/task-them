@@ -25,7 +25,7 @@ export abstract class Task{
      * @param phase 
      * @param phase_data 
      */
-    _execute(_id:string, task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<boolean>{
+    _execute(_id:string, task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<Exclude<TASK_STATE,"INIT">>{
         this._id=_id;
         return this.run(task_name,task_desc,state,phase,phase_data);
     }
@@ -39,7 +39,7 @@ export abstract class Task{
      * @param phase_data 
      * 
      */
-    protected abstract run(task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<boolean>;
+    protected abstract run(task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<Exclude<TASK_STATE,"INIT">>;
     
     /**
      * * Use this in your run function to report phase change to back end.
