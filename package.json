@@ -1,0 +1,32 @@
+{
+  "name": "task-them",
+  "version": "1.0.0",
+  "description": "Helps in creating/managing persistent task, which saves their state and resumes their state upon start.",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "rm -rf dist/ && tsc --build src/main",
+    "bundle": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anuragvohraec/task-them.git"
+  },
+  "keywords": [
+    "task",
+    "state-machine",
+    "state-management"
+  ],
+  "author": "anuragvohraec@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/anuragvohraec/task-them/issues"
+  },
+  "homepage": "https://github.com/anuragvohraec/task-them#readme",
+  "devDependencies": {
+    "ts-loader": "^8.0.14",
+    "typescript": "^4.1.3",
+    "webpack": "^5.12.2",
+    "webpack-cli": "^4.3.1"
+  },
+  "dependencies": {}
+}

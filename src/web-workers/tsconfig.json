@@ -1,0 +1,13 @@
+{
+  "extends": "../generic-tsconfig.json",
+  "compilerOptions": {
+    "lib": [
+      "esnext",
+      "webworker"
+    ],
+    "typeRoots": ["web-worker/@types"]
+  },
+  "references": [
+    {"path": "../lib"}
+  ]
+}
