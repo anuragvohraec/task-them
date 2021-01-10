@@ -25,13 +25,13 @@ export abstract class Task{
      * @param phase 
      * @param phase_data 
      */
-    _execute(_id:string, task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<Exclude<TASK_STATE,"INIT">>{
+    _execute(_id:string, task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<TASK_STATE>{
         this._id=_id;
         return this.run(task_name,task_desc,state,phase,phase_data);
     }
 
     /**
-     * returns true if completed, if failed returns false;
+     * returns next task state.
      * @param task_name 
      * @param task_desc 
      * @param state 
@@ -39,16 +39,15 @@ export abstract class Task{
      * @param phase_data 
      * 
      */
-    protected abstract run(task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<Exclude<TASK_STATE,"INIT">>;
+    protected abstract run(task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<TASK_STATE>;
     
     /**
-     * * Use this in your run function to report phase change to back end.
-     * * Reports phase change to scheduler.
+     * * Use this in your run function to report phase change to scheduler. This is vital to keep reporting scheduler about phase change so it can persist the phase change and resume it later if required.
      * * Every phase change will automatically make the state change to continue [unless the task is in ended state].
      * @param new_phase 
      * @param new_phase_data 
      */
-    change_phase(new_phase:string, new_phase_data:any){
+    record_phase_change(new_phase:string, new_phase_data?:any){
         TaskManager.change_task_phase(this._id!,new_phase,new_phase_data);
     }
 }

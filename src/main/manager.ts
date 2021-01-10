@@ -57,7 +57,7 @@ export class TaskManager{
         this.worker.postMessage({type:TaskManagerMessage.CHANGE_TASK_STATE, data: {task_id,state}})
     }
 
-    static change_task_phase(task_id:string, phase:string, phase_data:any){
+    static change_task_phase(task_id:string, phase:string, phase_data?:any){
         this.worker.postMessage({type: TaskManagerMessage.CHANGE_TASK_PHASE,data:{task_id,phase,phase_data}});
     }
 

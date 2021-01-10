@@ -50,11 +50,19 @@ class TaskScheduler{
                                 if(ENDING_STATE.has(new_state)){
                                     oldObject.ended="true";
                                 }
+                                
                                 const now = new Date().getTime();
                                 oldObject.updated_date=now;
                                 oldObject.updates_logs[now]=`STATE CHANGED: ${new_state} , from: <${oldObject.current_state_of_task}>`;
-                                oldObject.current_state_of_task=new_state;
                                 
+                                if(new_state==="INIT"){
+                                    const old_phase=oldObject.current_phase;
+                                    oldObject.current_phase=oldObject.init_phase;
+                                    oldObject.current_phase_data=oldObject.init_phase_data;
+                                    oldObject.updates_logs[now+1]=`PHASE CHANGED: ${oldObject.init_phase} , from: <${old_phase}>`;
+                                }
+                                oldObject.current_state_of_task=new_state;
+
                                 return oldObject;
                             });
                         };
