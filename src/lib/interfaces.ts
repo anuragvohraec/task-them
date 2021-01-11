@@ -12,7 +12,7 @@ export type TASK_BEHAVIOR = "WILL_QUEUE"|"ONLY_ONCE_IN_LIFE";
 export type TASK_STATE="INIT"|"CONTINUE"|"COMPLETED"|"FAILED";
 
 export interface TaskStateChangeHandler{
-    (state:TASK_STATE, phase:string, phase_data?:any):Promise<void>;
+    (state:TASK_STATE, phase:string, phase_data?:any):Promise<any>;
 }
 
 export interface TaskRunnerEntry{
