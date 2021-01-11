@@ -47,5 +47,6 @@ theme monospace
 ![Seq Diagram](./des/SequenceDiagram.svg)
 
 ## TODO 
+* one time call back on task completion
 * Force overwrite "TASK_STATE:ONCE_IN_LIFE"
 * cron

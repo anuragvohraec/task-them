@@ -33,7 +33,7 @@ async function* messageEventGenerator(){
 }
 
 class TaskScheduler{
-    private static dao:DAO = new DAO(TASK_THEM_DB,1,[{name:dbname,primaryKeyName:"_id",indexes:["task_name","ended"]}])
+    private static dao:DAO = new DAO(TASK_THEM_DB,1,[{name:dbname,primaryKeyName:"_id",indexes:["task_name","ended","created_date","updated_date"]}])
     static process=async ()=>{
             for await(let e of messageEventGenerator()){
                 if(e){
@@ -138,7 +138,7 @@ class TaskScheduler{
             found_te.sort((a,b)=>{
                 return a.created_date-b.created_date;
             })
-            for(let te in found_te){
+            for(let te of found_te){
                 postMessage({type:TaskSchedulerMessage.RUN_TASK, data:te});
             }
         }
