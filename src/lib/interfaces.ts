@@ -11,6 +11,10 @@ export type TASK_BEHAVIOR = "WILL_QUEUE"|"ONLY_ONCE_IN_LIFE";
  */
 export type TASK_STATE="INIT"|"CONTINUE"|"COMPLETED"|"FAILED";
 
+export interface TaskStateChangeHandler{
+    (state:TASK_STATE, phase:string, phase_data?:any):Promise<void>;
+}
+
 export interface TaskRunnerEntry{
     _id:string;
     /**
@@ -31,7 +35,7 @@ export interface TaskRunnerEntry{
     behaves: TASK_BEHAVIOR;
     
 
-    current_state_of_task: TASK_STATE;
+    state: TASK_STATE;
     /**
      * if set true task will no more be picked. Its set as true on failed or complete.
      */
@@ -39,6 +43,12 @@ export interface TaskRunnerEntry{
 
 
     init_phase:string;
+
+    /**
+     * Any _init data to be passed to task. This data cannot be modified by the task.
+     */
+    init_phase_data: any;
+    
     /**
      * Cannot be falsy.\
      * This are Task specific phase , for example for initializing an app following can be its phase
@@ -55,16 +65,12 @@ export interface TaskRunnerEntry{
      * }
      * ```
      */
-    current_phase: string;
+    phase: string;
 
-    /**
-     * Any _init data to be passed to task. This data cannot be modified by the task.
-     */
-    init_phase_data: any;
     /**
      * Each phase once completes has a state of data, which can be saved in here. Its can be used to start a task from whee ever it left off.
      */
-    current_phase_data: any;
+    phase_data: any;
     /**
      * Date on which this task was modified, in milliseconds since Unix Epoch.
      */

@@ -1,4 +1,4 @@
-import {RandoEngine} from './engines/rando-engine';
+import {RandoEngine} from '../lib/rando-engine';
 import {DAO} from './engines/dao';
 import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage } from '../lib';
 
@@ -53,15 +53,15 @@ class TaskScheduler{
                                 
                                 const now = new Date().getTime();
                                 oldObject.updated_date=now;
-                                oldObject.updates_logs[now]=`STATE CHANGED: ${new_state} , from: <${oldObject.current_state_of_task}>`;
+                                oldObject.updates_logs[now]=`STATE CHANGED: ${new_state} , from: <${oldObject.state}>`;
                                 
                                 if(new_state==="INIT"){
-                                    const old_phase=oldObject.current_phase;
-                                    oldObject.current_phase=oldObject.init_phase;
-                                    oldObject.current_phase_data=oldObject.init_phase_data;
+                                    const old_phase=oldObject.phase;
+                                    oldObject.phase=oldObject.init_phase;
+                                    oldObject.phase_data=oldObject.init_phase_data;
                                     oldObject.updates_logs[now+1]=`PHASE CHANGED: ${oldObject.init_phase} , from: <${old_phase}>`;
                                 }
-                                oldObject.current_state_of_task=new_state;
+                                oldObject.state=new_state;
 
                                 return oldObject;
                             });
@@ -76,10 +76,10 @@ class TaskScheduler{
                             await TaskScheduler.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
                                 const now = new Date().getTime();
                                 oldObject.updated_date=now;
-                                oldObject.updates_logs[now]=`PHASE CHANGED: ${new_phase} , from: <${oldObject.current_phase}>`;
-                                oldObject.current_state_of_task="CONTINUE";
-                                oldObject.current_phase=new_phase;
-                                oldObject.current_phase_data=new_phase_data;
+                                oldObject.updates_logs[now]=`PHASE CHANGED: ${new_phase} , from: <${oldObject.phase}>`;
+                                oldObject.state="CONTINUE";
+                                oldObject.phase=new_phase;
+                                oldObject.phase_data=new_phase_data;
 
                                 return oldObject;
                             });
@@ -106,14 +106,14 @@ class TaskScheduler{
                             updates_logs[now]="STATE CHANGED: INIT";
                             updates_logs[now+1]=`PHASE CHANGED: ${init_phase}`;
 
-                            const _id= await RandoEngine.getuuid();
+                            const _id= data._id;
                             const te: TaskRunnerEntry={
                                 task_name,task_desc,init_phase,init_phase_data,behaves,
                                 _id,
                                 created_date:now,
-                                current_phase:init_phase,
-                                current_phase_data:init_phase_data,
-                                current_state_of_task:"INIT",
+                                phase:init_phase,
+                                phase_data:init_phase_data,
+                                state:"INIT",
                                 ended:"false",
                                 updated_date:now,
                                 updates_logs

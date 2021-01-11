@@ -1,6 +1,6 @@
 {
   "name": "task-them",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "Helps in creating/managing persistent task, which saves their state and resumes their state upon start.",
   "main": "dist/main/index.js",
   "scripts": {
