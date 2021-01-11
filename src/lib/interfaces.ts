@@ -16,7 +16,7 @@ export const ENDING_STATES:Set<TASK_STATE>=new Set<TASK_STATE>(["COMPLETED","FAI
 /**
  * gets called for task ending states: COMPLETED or FAILED
  */
-export interface EndingStateChangeHandler{
+export interface StateChangeHandler{
     (state:TASK_STATE, phase:string, phase_data?:any):Promise<any>;
 }
 

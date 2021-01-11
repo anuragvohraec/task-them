@@ -1,12 +1,12 @@
 import { Task } from "./task";
-import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, EndingStateChangeHandler} from '../lib';
+import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler} from '../lib';
 import {RandoEngine,ENDING_STATES} from '../lib';
 
 export class TaskManager{
     private static taskRegistry:{[task_name:string]:typeof Task}={};
     private static initCalled=false;
     private static worker:Worker;
-    private static changeHandlerRegistry:{[key:string]:EndingStateChangeHandler}={};
+    private static changeHandlerRegistry:{[key:string]:StateChangeHandler}={};
 
     /**
      * 
@@ -60,7 +60,7 @@ export class TaskManager{
         try{
             const stateChangeHandler = this.changeHandlerRegistry[task_id];
             //@ts-ignore
-            if(stateChangeHandler && ENDING_STATES.has(state)){
+            if(stateChangeHandler){
                 await stateChangeHandler(state,phase,phase_data);
             }
         }catch(e){
@@ -79,10 +79,10 @@ export class TaskManager{
      * @param task_desc Task description it can be different for same task, clarifying intent of the Task
      * @param init_phase Init phase to be used by our task. This is the phase your app will stored to when rollback is called.
      * @param init_phase_data init data to be used by roll back.
-     * @param endingStateChangeHandler handler function to run when task ends : "COMPLETED" | "FAILED"
+     * @param stateChangeHandler handler function to run on task state change
      */
     static async create_task(task_info:{task_name:string,task_desc:string,init_phase:string, 
-        init_phase_data?:any, endingStateChangeHandler?:EndingStateChangeHandler}){
+        init_phase_data?:any, stateChangeHandler?:StateChangeHandler}){
         const t = this.taskRegistry[task_info.task_name];
         if(!t){
             throw `No such task registered with TaskManager. You must register task classes to use them!`;
@@ -90,8 +90,8 @@ export class TaskManager{
         const _id= await RandoEngine.getuuid();
         //@ts-ignore
         const behaves: TASK_BEHAVIOR = t.behavior;
-        if(task_info.endingStateChangeHandler){
-            this.changeHandlerRegistry[_id]=task_info.endingStateChangeHandler;
+        if(task_info.stateChangeHandler){
+            this.changeHandlerRegistry[_id]=task_info.stateChangeHandler;
         }
         this.worker.postMessage({type: TaskManagerMessage.CREATE_TASK,data:{_id, task_name:task_info.task_name, 
             task_desc:task_info.task_desc, init_phase:task_info.init_phase,
