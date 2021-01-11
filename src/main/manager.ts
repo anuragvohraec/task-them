@@ -79,9 +79,10 @@ export class TaskManager{
      * @param task_desc Task description it can be different for same task, clarifying intent of the Task
      * @param init_phase Init phase to be used by our task. This is the phase your app will stored to when rollback is called.
      * @param init_phase_data init data to be used by roll back.
+     * @param endingStateChangeHandler handler function to run when task ends : "COMPLETED" | "FAILED"
      */
     static async create_task(task_info:{task_name:string,task_desc:string,init_phase:string, 
-        init_phase_data?:any, stateChangeHandler?:EndingStateChangeHandler}){
+        init_phase_data?:any, endingStateChangeHandler?:EndingStateChangeHandler}){
         const t = this.taskRegistry[task_info.task_name];
         if(!t){
             throw `No such task registered with TaskManager. You must register task classes to use them!`;
@@ -89,8 +90,8 @@ export class TaskManager{
         const _id= await RandoEngine.getuuid();
         //@ts-ignore
         const behaves: TASK_BEHAVIOR = t.behavior;
-        if(task_info.stateChangeHandler){
-            this.changeHandlerRegistry[_id]=task_info.stateChangeHandler;
+        if(task_info.endingStateChangeHandler){
+            this.changeHandlerRegistry[_id]=task_info.endingStateChangeHandler;
         }
         this.worker.postMessage({type: TaskManagerMessage.CREATE_TASK,data:{_id, task_name:task_info.task_name, 
             task_desc:task_info.task_desc, init_phase:task_info.init_phase,
