@@ -1,11 +1,10 @@
-import {RandoEngine} from '../lib/rando-engine';
+import {ENDING_STATES} from '../lib';
 import {DAO} from './engines/dao';
 import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage } from '../lib';
 
 const TASK_THEM_DB = "TASK_THEM_DB";
 const dbname = "_task_them_entries";
 
-const ENDING_STATE:Set<TASK_STATE>=new Set<TASK_STATE>(["COMPLETED","FAILED"]);
 
 const msgEventStream = new ReadableStream<MessageEvent>({
     start:(controller)=>{
@@ -47,7 +46,7 @@ class TaskScheduler{
                             const task_id:string = data.task_id;
                             const new_state: TASK_STATE = data.state;
                             await TaskScheduler.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
-                                if(ENDING_STATE.has(new_state)){
+                                if(ENDING_STATES.has(new_state)){
                                     oldObject.ended="true";
                                 }
                                 

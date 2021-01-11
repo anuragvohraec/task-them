@@ -1,12 +1,12 @@
 import { Task } from "./task";
-import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, TaskStateChangeHandler} from '../lib';
-import {RandoEngine} from '../lib/rando-engine';
+import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, EndingStateChangeHandler} from '../lib';
+import {RandoEngine,ENDING_STATES} from '../lib';
 
 export class TaskManager{
     private static taskRegistry:{[task_name:string]:typeof Task}={};
     private static initCalled=false;
     private static worker:Worker;
-    private static changeHandlerRegistry:{[key:string]:TaskStateChangeHandler}={};
+    private static changeHandlerRegistry:{[key:string]:EndingStateChangeHandler}={};
 
     /**
      * 
@@ -60,7 +60,7 @@ export class TaskManager{
         try{
             const stateChangeHandler = this.changeHandlerRegistry[task_id];
             //@ts-ignore
-            if(stateChangeHandler){
+            if(stateChangeHandler && ENDING_STATES.has(state)){
                 await stateChangeHandler(state,phase,phase_data);
             }
         }catch(e){
@@ -81,7 +81,7 @@ export class TaskManager{
      * @param init_phase_data init data to be used by roll back.
      */
     static async create_task(task_info:{task_name:string,task_desc:string,init_phase:string, 
-        init_phase_data?:any, stateChangeHandler?:TaskStateChangeHandler}){
+        init_phase_data?:any, stateChangeHandler?:EndingStateChangeHandler}){
         const t = this.taskRegistry[task_info.task_name];
         if(!t){
             throw `No such task registered with TaskManager. You must register task classes to use them!`;

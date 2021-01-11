@@ -11,7 +11,12 @@ export type TASK_BEHAVIOR = "WILL_QUEUE"|"ONLY_ONCE_IN_LIFE";
  */
 export type TASK_STATE="INIT"|"CONTINUE"|"COMPLETED"|"FAILED";
 
-export interface TaskStateChangeHandler{
+export const ENDING_STATES:Set<TASK_STATE>=new Set<TASK_STATE>(["COMPLETED","FAILED"]);
+
+/**
+ * gets called for task ending states: COMPLETED or FAILED
+ */
+export interface EndingStateChangeHandler{
     (state:TASK_STATE, phase:string, phase_data?:any):Promise<any>;
 }
 
