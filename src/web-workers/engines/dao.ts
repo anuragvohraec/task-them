@@ -1,5 +1,5 @@
 
-interface DBDetails{
+export interface DBDetails{
     name: string,
     primaryKeyName?: string;
     indexes?:string[];
