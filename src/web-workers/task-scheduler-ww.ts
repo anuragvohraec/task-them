@@ -1,10 +1,5 @@
-import {ENDING_STATES} from '../lib';
-import {DAO} from './engines/dao';
-import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage } from '../lib';
-
-const TASK_THEM_DB = "TASK_THEM_DB";
-const dbname = "_task_them_entries";
-
+import {ENDING_STATES,DAO} from '../lib';
+import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage,task_them_os as dbname, dao } from '../lib';
 
 const msgEventStream = new ReadableStream<MessageEvent>({
     start:(controller)=>{
@@ -32,7 +27,6 @@ async function* messageEventGenerator(){
 }
 
 class TaskScheduler{
-    private static dao:DAO = new DAO(TASK_THEM_DB,1,[{name:dbname,primaryKeyName:"_id",indexes:["task_name","ended","created_date","updated_date"]}])
     static process=async ()=>{
             for await(let e of messageEventGenerator()){
                 if(e){
@@ -45,7 +39,7 @@ class TaskScheduler{
                         case TaskManagerMessage.CHANGE_TASK_STATE:{
                             const task_id:string = data.task_id;
                             const new_state: TASK_STATE = data.state;
-                            await TaskScheduler.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
+                            await dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
                                 if(ENDING_STATES.has(new_state)){
                                     oldObject.ended="true";
                                 }
@@ -72,7 +66,7 @@ class TaskScheduler{
                             const new_phase: string = data.phase;
                             const new_phase_data:any = data.phase_data;
 
-                            await TaskScheduler.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
+                            await dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
                                 const now = new Date().getTime();
                                 oldObject.updated_date=now;
                                 oldObject.updates_logs[now]=`PHASE CHANGED: ${new_phase} , from: <${oldObject.phase}>`;
@@ -90,7 +84,7 @@ class TaskScheduler{
                             const behaves:TASK_BEHAVIOR = data.behaves;
                             if(behaves === "ONLY_ONCE_IN_LIFE"){
                                 //check if once such task is already present in DB.
-                                const found_entries = await TaskScheduler.dao.find(dbname,"task_name",task_name);
+                                const found_entries = await dao.find(dbname,"task_name",task_name);
                                 if(found_entries.length>0){
                                     break;
                                 }
@@ -118,11 +112,19 @@ class TaskScheduler{
                                 updates_logs
                             }
 
-                            if(await TaskScheduler.dao.create(dbname,te)){
+                            if(await dao.create(dbname,te)){
                                 postMessage({type:TaskSchedulerMessage.RUN_TASK, data:te});
                             }
                         }
                         break;
+                        case TaskManagerMessage.RUN_A_TASK:{
+                            //check if task is ended
+                            const {task_id}=data;
+                            const te:TaskRunnerEntry = await dao.read(dbname,task_id);
+                            if(te && !te.ended){
+                                postMessage({type:TaskSchedulerMessage.RUN_TASK, data:te});
+                            }
+                        }
                         default: throw `No such case: ${msgType} registered with scheduler!`;break;
                     }
                 }
@@ -132,7 +134,7 @@ class TaskScheduler{
 
     static async init(){
         //query database for all task where ended=false and 
-        const found_te: TaskRunnerEntry[]=await TaskScheduler.dao.find(dbname,"ended","false");
+        const found_te: TaskRunnerEntry[]=await dao.find(dbname,"ended","false");
         if(found_te.length>0){
             found_te.sort((a,b)=>{
                 return a.created_date-b.created_date;

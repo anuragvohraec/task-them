@@ -1,12 +1,14 @@
 import { Task } from "./task";
-import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler} from '../lib';
-import {RandoEngine,ENDING_STATES} from '../lib';
+import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler, DAO} from '../lib';
+import {RandoEngine,ENDING_STATES,dao,task_them_os} from '../lib';
 
 export class TaskManager{
     private static taskRegistry:{[task_name:string]:typeof Task}={};
     private static initCalled=false;
     private static worker:Worker;
     private static changeHandlerRegistry:{[key:string]:StateChangeHandler}={};
+    private static activeTask:Record<string,TASK_STATE>={};
+    private static pausedTask:Record<string,TASK_STATE>={};
 
     /**
      * 
@@ -28,40 +30,106 @@ export class TaskManager{
     static init(scheduler_worker_stringUrl: string | URL="task-runner-ww.js"){
         if(!this.initCalled){
             this.worker = new Worker(scheduler_worker_stringUrl);
-            //TODO handler at the worker end
-            this.worker.postMessage({type:TaskManagerMessage.INIT_WEBWORKER});
             this.worker.onmessage=async(e)=>{
                     switch(e.data.type){
                         case TaskSchedulerMessage.RUN_TASK:{
                             const t:TaskRunnerEntry = e.data.data;
                             const task_name = t.task_name;
+                            this.activeTask[t._id]=t.state;
+                            delete this.pausedTask[t._id];
                             try{
                                 if(!this.taskRegistry[task_name]){
                                     console.warn(`No such tasks!: ${task_name}`);
                                 }else{
                                     const task:Task = Reflect.construct(this.taskRegistry[task_name],[]);
                                     const p = await task._execute(t._id,t.task_name,t.task_desc,t.state,t.phase,t.phase_data);
-                                    await this.change_task_state(t._id,p, t.phase, t.phase_data);
+                                    if(ENDING_STATES.has(p)){
+                                        delete this.activeTask[t._id];
+                                    }else{
+                                        this.pausedTask[t._id]=p;
+                                    }
+                                    await this.change_task_state(t._id,p);
                                 }
                             }catch(e){
                                 console.warn(`Very bad Task ${task_name}! Your must catch all your exception in your run method!`);
                                 console.error(e);
-                                return await this.change_task_state(t._id,"FAILED", t.phase, t.phase_data);
+                                return await this.change_task_state(t._id,"FAILED");
                             }
                         }
                     }
-            }
+            };
+            this.worker.postMessage({type:TaskManagerMessage.INIT_WEBWORKER});
             this.initCalled=true;
         }
     }
 
-    private  static async change_task_state(task_id:string, state: TASK_STATE, phase:string, phase_data?:any){
+    /**
+     * Gives ID of all task that are active and running currently.
+     */
+    public static get activeTasks():string[]{
+        return Object.keys(this.activeTask);
+    }
+
+    /**
+     * Gives ID of all task which are not ended, but have been paused from running (by user **run** code returning say CONTINUE).
+     */
+    public static get pausedTasks():string[]{
+        return Object.keys(this.pausedTask);
+    }
+
+    /**
+     * Check if the task is active
+     * @param task_id 
+     */
+    public static isTaskActive(task_id:string):boolean{
+        return this.activeTask[task_id]?true:false;
+    }
+
+    /**
+     * check if the task is paused. Paused task is the one which has not ended , but is not run by te manager.
+     * @param task_id 
+     */
+    public static isTaskPaused(task_id:string):boolean{
+        return this.pausedTask[task_id]?true:false;
+    }
+
+    /**
+     * The task which has ended.
+     * @param task_id 
+     */
+    public static hasTaskEnded(task_id:string):boolean{
+        return (!this.isTaskActive(task_id) && !this.isTaskPaused(task_id))?true:false;
+    }
+
+    /**
+     * One can implement a continues progress detector using isTaskActive, isTaskPaused and runAPausedTask.
+     * @param task_id 
+     */
+    public static runAPausedTask(task_id:string){
+        if(this.pausedTask[task_id]){
+            this.worker.postMessage({type:TaskManagerMessage.RUN_A_TASK, data:{task_id}});
+        }
+    }
+
+    private static async getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
+        return await dao.read(task_them_os,task_id);
+    }
+
+    /**
+     * If you want to run some advanced query on TaskDB than this DAO can help.
+     */
+    static get tsDAO():DAO{
+        return dao;
+    }
+
+    private  static async change_task_state(task_id:string, state: TASK_STATE){
         this.worker.postMessage({type:TaskManagerMessage.CHANGE_TASK_STATE, data: {task_id,state}});
         try{
             const stateChangeHandler = this.changeHandlerRegistry[task_id];
             //@ts-ignore
             if(stateChangeHandler){
-                await stateChangeHandler(state,phase,phase_data);
+                await stateChangeHandler(state, task_id);
+                this.remove_stateChangeHandler(task_id);
             }
         }catch(e){
             console.warn(`Very bad!, your TaskStateChangeHandler for task_id:${task_id} do not catches its errors!`);
@@ -69,6 +137,12 @@ export class TaskManager{
         }
     }
 
+    /**
+     * I sparingly used separately. In run change_phase method is available. But this method can be helpful in some special case.
+     * @param task_id 
+     * @param phase 
+     * @param phase_data 
+     */
     static change_task_phase(task_id:string, phase:string, phase_data?:any){
         this.worker.postMessage({type: TaskManagerMessage.CHANGE_TASK_PHASE,data:{task_id,phase,phase_data}});
     }
@@ -99,7 +173,7 @@ export class TaskManager{
         return _id;
     }
 
-    static remove_stateChangeHandler(task_id:string){
+    private static remove_stateChangeHandler(task_id:string){
         delete this.changeHandlerRegistry[task_id];
     }
 }
