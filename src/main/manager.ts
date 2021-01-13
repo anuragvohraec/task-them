@@ -2,13 +2,20 @@ import { Task } from "./task";
 import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler, DAO} from '../lib';
 import {RandoEngine,ENDING_STATES,dao,task_them_os} from '../lib';
 
+export interface BasicTaskInfo{
+    _id:string;
+    task_name:string;
+    task_desc:string;
+    state: TASK_STATE;
+}
+
 export class TaskManager{
     private static taskRegistry:{[task_name:string]:typeof Task}={};
     private static initCalled=false;
     private static worker:Worker;
     private static changeHandlerRegistry:{[key:string]:StateChangeHandler}={};
-    private static activeTask:Record<string,TASK_STATE>={};
-    private static pausedTask:Record<string,TASK_STATE>={};
+    private static activeTask:Record<string,BasicTaskInfo>={};
+    private static pausedTask:Record<string,BasicTaskInfo>={};
 
     /**
      * 
@@ -35,7 +42,7 @@ export class TaskManager{
                         case TaskSchedulerMessage.RUN_TASK:{
                             const t:TaskRunnerEntry = e.data.data;
                             const task_name = t.task_name;
-                            this.activeTask[t._id]=t.state;
+                            this.activeTask[t._id]={...t};
                             delete this.pausedTask[t._id];
                             try{
                                 if(!this.taskRegistry[task_name]){
@@ -46,7 +53,7 @@ export class TaskManager{
                                     if(ENDING_STATES.has(p)){
                                         delete this.activeTask[t._id];
                                     }else{
-                                        this.pausedTask[t._id]=p;
+                                        this.pausedTask[t._id]={...t,state:p};
                                     }
                                     await this.change_task_state(t._id,p);
                                 }
@@ -66,15 +73,15 @@ export class TaskManager{
     /**
      * Gives ID of all task that are active and running currently.
      */
-    public static get activeTasks():string[]{
-        return Object.keys(this.activeTask);
+    public static get activeTasks():Record<string, BasicTaskInfo>{
+        return this.activeTask;
     }
 
     /**
      * Gives ID of all task which are not ended, but have been paused from running (by user **run** code returning say CONTINUE).
      */
-    public static get pausedTasks():string[]{
-        return Object.keys(this.pausedTask);
+    public static get pausedTasks():Record<string, BasicTaskInfo>{
+        return this.pausedTask;
     }
 
     /**
@@ -111,7 +118,11 @@ export class TaskManager{
         }
     }
 
-    private static async getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
+    /**
+     * Gets current task status
+     * @param task_id 
+     */
+    public static async getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
         return await dao.read(task_them_os,task_id);
     }
 
@@ -138,7 +149,7 @@ export class TaskManager{
     }
 
     /**
-     * I sparingly used separately. In run change_phase method is available. But this method can be helpful in some special case.
+     * Is sparingly used separately. In run change_phase method is available. But this method can be helpful in some special case.
      * @param task_id 
      * @param phase 
      * @param phase_data 
