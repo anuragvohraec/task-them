@@ -112,8 +112,11 @@ export class TaskManager{
      * One can implement a continues progress detector using isTaskActive, isTaskPaused and runAPausedTask.
      * @param task_id 
      */
-    public static runAPausedTask(task_id:string){
+    public static runAPausedTask(task_id:string,stateChangeHandler?:StateChangeHandler){
         if(this.pausedTask[task_id]){
+            if(stateChangeHandler){
+                this.changeHandlerRegistry[task_id]=stateChangeHandler;
+            }
             this.worker.postMessage({type:TaskManagerMessage.RUN_A_TASK, data:{task_id}});
         }
     }
