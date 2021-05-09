@@ -1,10 +1,10 @@
 {
   "name": "task-them",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "Helps in creating/managing persistent task, which saves their state and resumes their state upon start.",
   "main": "dist/main/index.js",
   "scripts": {
-    "prepublish":"rm -rf dist/ && tsc --build src/main && webpack",
+    "prepublish": "rm -rf dist/ && tsc --build src/main && webpack",
     "build": "rm -rf dist/ && tsc --build src/main",
     "bundle": "webpack"
   },
@@ -24,10 +24,13 @@
   },
   "homepage": "https://github.com/anuragvohraec/task-them#readme",
   "devDependencies": {
+    "@rollup/plugin-typescript": "^8.2.1",
+    "rollup": "^2.47.0",
+    "rollup-plugin-terser": "^7.0.2",
     "ts-loader": "^8.0.14",
-    "typescript": "^4.1.3",
+    "tslib": "^2.2.0",
+    "typescript": "4.2.3",
     "webpack": "^5.12.2",
     "webpack-cli": "^4.3.1"
-  },
-  "dependencies": {}
+  }
 }

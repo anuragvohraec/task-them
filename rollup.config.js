@@ -1,0 +1,11 @@
+// rollup.config.js
+import typescript from '@rollup/plugin-typescript';
+import { terser } from "rollup-plugin-terser";
+
+export default {
+  input: './src/main/index.ts',
+  output: {
+    dir: './dist',
+  },
+  plugins: [typescript(),terser({ format: { comments: false } })]
+};
