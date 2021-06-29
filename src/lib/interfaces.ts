@@ -1,8 +1,9 @@
 /**
  * * WILL_QUEUE : Multiple task can exist in processing queue.
  * * ONLY_ONCE_IN_LIFE: One can create only one such task. Unless you delete the task runner task, which you don't do ever!
+ * * ONLY_ONE_ACTIVE_IN_QUEUE: If its created multiple times, then only one will remain active at a time.
  */
-export type TASK_BEHAVIOR = "WILL_QUEUE"|"ONLY_ONCE_IN_LIFE";
+export type TASK_BEHAVIOR = "WILL_QUEUE"|"ONLY_ONCE_IN_LIFE"|"ONLY_ONE_ACTIVE_IN_QUEUE";
 /**
  * This state is used by the Task runner to check which task needs to be picked. For example:
  * * COMPLETED: means that all went good as desired. Completed task are not picked up again.

@@ -170,14 +170,14 @@ export class TaskManager{
      * @param stateChangeHandler handler function to run on task state change
      */
     static async create_task(task_info:{task_name:string,task_desc:string,init_phase:string, 
-        init_phase_data?:any, stateChangeHandler?:StateChangeHandler}){
+        init_phase_data?:any, stateChangeHandler?:StateChangeHandler,run_time_behavior?:TASK_BEHAVIOR}){
         const t = this.taskRegistry[task_info.task_name];
         if(!t){
             throw `No such task registered with TaskManager. You must register task classes to use them!`;
         }
         const _id= await RandoEngine.getuuid();
         //@ts-ignore
-        const behaves: TASK_BEHAVIOR = t.behavior;
+        const behaves: TASK_BEHAVIOR = task_info.run_time_behavior??t.behavior;
         if(task_info.stateChangeHandler){
             this.changeHandlerRegistry[_id]=task_info.stateChangeHandler;
         }

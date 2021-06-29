@@ -88,6 +88,15 @@ class TaskScheduler{
                                 if(found_entries.length>0){
                                     break;
                                 }
+                            }else if(behaves === "ONLY_ONE_ACTIVE_IN_QUEUE"){
+                                const found_entries = await dao.find<{name:string}>(dbname,"ended","false");
+                                if(found_entries.length>0){
+                                    //lets search if queue already have one active member of this
+                                    let f = found_entries.filter(e=>e.name===task_name);
+                                    if(f.length>0){
+                                        break;
+                                    }
+                                }
                             }
                             const task_desc:string = data.task_desc;
                             const init_phase:string=data.init_phase;
