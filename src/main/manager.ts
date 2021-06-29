@@ -33,8 +33,10 @@ export class TaskManager{
      * All task classes must be registered prior to calling this function.
      * All which are registered after this will not be picked.
      * This function will only work once. that is even if you call init again, it will not have no effect.
+     * @param scheduler_worker_stringUrl 
+     * @param archive_ended_task_before : if -1 then it will do no archiving, else it will archive all ended task before this time. Since Unix Epoch time
      */
-    static init(scheduler_worker_stringUrl: string | URL="task-runner-ww.js"){
+    static init(scheduler_worker_stringUrl: string | URL="task-runner-ww.js",archive_ended_task_before:number=-1){
         if(!this.initCalled){
             this.worker = new Worker(scheduler_worker_stringUrl);
             this.worker.onmessage=async(e)=>{
@@ -65,7 +67,7 @@ export class TaskManager{
                         }
                     }
             };
-            this.worker.postMessage({type:TaskManagerMessage.INIT_WEBWORKER});
+            this.worker.postMessage({type:TaskManagerMessage.INIT_WEBWORKER, archive_ended_task_before});
             this.initCalled=true;
         }
     }

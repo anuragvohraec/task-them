@@ -33,7 +33,9 @@ class TaskScheduler{
                     const data = e.data.data;
                     const msgType:TaskManagerMessage = e.data.type;
                     switch (msgType) {
-                        case TaskManagerMessage.INIT_WEBWORKER: await TaskScheduler.init();
+                        case TaskManagerMessage.INIT_WEBWORKER: 
+                        let archive_ended_task_before:number=e.data.archive_ended_task_before;
+                        await TaskScheduler.init(archive_ended_task_before);
                         break;
                         
                         case TaskManagerMessage.CHANGE_TASK_STATE:{
@@ -141,15 +143,31 @@ class TaskScheduler{
             
     }
 
-    static async init(){
+    static async init(archive_ended_task_before:number){
         //query database for all task where ended=false and 
-        const found_te: TaskRunnerEntry[]=await dao.find(dbname,"ended","false");
-        if(found_te.length>0){
-            found_te.sort((a,b)=>{
+        const found_net: TaskRunnerEntry[]=await dao.find(dbname,"ended","false");
+        if(found_net.length>0){
+            found_net.sort((a,b)=>{
                 return a.created_date-b.created_date;
             })
-            for(let te of found_te){
+            for(let te of found_net){
                 postMessage({type:TaskSchedulerMessage.RUN_TASK, data:te});
+            }
+        }
+
+        //deleting ended task before the given date
+        if(archive_ended_task_before>-1){
+            const found_et: TaskRunnerEntry[] = await dao.find(dbname,"ended","true");
+            if(found_et.length>0){
+                found_et.sort((a,b)=>{
+                    return a.created_date-b.created_date;
+                });
+                for(let et of found_et){
+                    if(et.created_date<=archive_ended_task_before){
+                        //lets delete them
+                        await dao.delete(dbname,et._id);
+                    }
+                }
             }
         }
     }
