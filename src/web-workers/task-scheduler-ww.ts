@@ -135,7 +135,7 @@ class TaskScheduler{
                             if(te && !te.ended){
                                 postMessage({type:TaskSchedulerMessage.RUN_TASK, data:te});
                             }
-                        }
+                        }break;
                         default: throw `No such case: ${msgType} registered with scheduler!`;break;
                     }
                 }

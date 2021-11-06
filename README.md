@@ -52,7 +52,15 @@ theme monospace
 * cron
 
 
+## Build
+1. Run `npm run build`
+2. Run `npm run prepublish`
+3. To build index.js, run : `npx rollup -c rollup.config.js` , let it give all errors
+
 ## versions
+### "version": "5.0.5"
+1. Bug fix : No break in task scheduler.
+
 ### "version": "5.0.4"
 1. Made TaskManagerMessage enum type based on numbers rather than string, as it was giving bugs.
 
