@@ -91,7 +91,7 @@ export class DAO {
     }
 
     public async deleteTheDB() {
-        if (this.isInitialized) {
+        if (await this.isInitialized) {
             try {
                 this.closeTheDB();
                 const req = indexedDB.deleteDatabase(this.databaseName);
