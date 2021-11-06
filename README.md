@@ -61,9 +61,6 @@ theme monospace
 ### "version": "5.0.5"
 1. Bug fix : No break in task scheduler.
 
-### "version": "5.0.4"
-1. Made TaskManagerMessage enum type based on numbers rather than string, as it was giving bugs.
-
 ### "version": "5.0.3"
 1. Archiving ended task, mechanism. One can mention the archiving time while initializing the task manager.
 2. Added additional task behavior: ONLY_ONE_ACTIVE_IN_QUEUE, such a task can remain only one active at a time, i.e. if a task is not ended and is still in queue no new task will be created, even if called.
