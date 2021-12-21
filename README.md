@@ -58,6 +58,9 @@ theme monospace
 3. To build index.js, run : `npx rollup -c rollup.config.js` , let it give all errors
 
 ## versions
+### "version": "5.0.6"
+1. Manager.clearTaskThem function added to clear taskthem completely
+
 ### "version": "5.0.5"
 1. Bug fix : No break in task scheduler.
 
