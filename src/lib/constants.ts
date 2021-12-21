@@ -5,17 +5,23 @@ export enum TaskManagerMessage{
     CHANGE_TASK_STATE="CHANGE_TASK_STATE",
     CHANGE_TASK_PHASE="CHANGE_TASK_PHASE",
     CREATE_TASK="CREATE_TASK",
-    RUN_A_TASK="RUN_A_TASK"
+    RUN_A_TASK="RUN_A_TASK",
+    GET_TASK_STATUS="GET_TASK_STATUS",
+    /**
+     * Clears all tasks.
+     */
+    CLEAR_TASK_THEM="CLEAR_TASK_THEM"
 }
 
 //Object.freeze(TaskManagerMessage);
 
 export enum TaskSchedulerMessage{
-    RUN_TASK="RUN_TASK"
+    RUN_TASK="RUN_TASK",
+    TASK_STATUS="TASK_STATUS",
+    CLEAR_TASK_THEM="CLEAR_TASK_THEM"
 }
 
 export const TASK_THEM_DB = "TASK_THEM_DB";
 export const task_them_os = "_task_them_entries";
 
 //Object.freeze(TaskSchedulerMessage);
-export const dao:DAO = new DAO(TASK_THEM_DB,1,[{name:task_them_os,primaryKeyName:"_id",indexes:["task_name","ended","created_date","updated_date"]}])

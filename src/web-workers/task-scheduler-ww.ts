@@ -1,5 +1,7 @@
-import {ENDING_STATES,DAO} from '../lib';
-import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage,task_them_os as dbname, dao } from '../lib';
+import {ENDING_STATES,DAO, TASK_THEM_DB, task_them_os} from '../lib';
+import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage,task_them_os as dbname } from '../lib';
+
+const dao:DAO = new DAO(TASK_THEM_DB,1,[{name:task_them_os,primaryKeyName:"_id",indexes:["task_name","ended","created_date","updated_date"]}]);
 
 const msgEventStream = new ReadableStream<MessageEvent>({
     start:(controller)=>{
@@ -33,6 +35,20 @@ class TaskScheduler{
                     const data = e.data.data;
                     const msgType:TaskManagerMessage = e.data.type;
                     switch (msgType) {
+                        case TaskManagerMessage.CLEAR_TASK_THEM:{
+                            if(await dao.cleanAllObjectStores()){
+                                postMessage({type:TaskSchedulerMessage.CLEAR_TASK_THEM,data:true});
+                            }else{
+                                postMessage({type:TaskSchedulerMessage.CLEAR_TASK_THEM,data:false});
+                            }
+                        }break;
+
+                        case TaskManagerMessage.GET_TASK_STATUS:{
+                            const task_id:string = data.task_id;
+                            let te:TaskRunnerEntry = await dao.read(dbname,task_id);
+                            postMessage({type:TaskSchedulerMessage.TASK_STATUS, data:te});
+                        }break;
+
                         case TaskManagerMessage.INIT_WEBWORKER: 
                         let archive_ended_task_before:number=e.data.archive_ended_task_before;
                         await TaskScheduler.init(archive_ended_task_before);

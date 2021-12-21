@@ -126,6 +126,37 @@ export class DAO {
         }
     }
 
+    async cleanAllObjectStores(){
+        let allGood=false;
+        if (await this.isInitialized) {
+            const l = this.db.objectStoreNames.length;
+            try{
+                for(let i=0;i<l;i++){
+                    const osName = this.db.objectStoreNames.item(i);
+        
+                    const os = this.db.transaction([osName!], 'readwrite').objectStore(osName!);
+                    const req = os.clear();
+                    
+                    if(!await new Promise<boolean>(res=>{
+                            req.onsuccess=(e:Event)=>{
+                                res(true);
+                            }
+                            req.onerror=(e:Event)=>{
+                                res(false);
+                            }
+                        })
+                    ){
+                        throw `${osName} not cleared`;
+                    }
+                }
+                allGood=true;
+            }catch(e){
+                console.error(e);
+            }
+        }
+        return allGood;
+    }
+
     async create(dbname: string, objectToSave: any) {
         if (await this.isInitialized) {
             try {

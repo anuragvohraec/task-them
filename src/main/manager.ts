@@ -1,6 +1,6 @@
 import { Task } from "./task";
-import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler, DAO} from '../lib';
-import {RandoEngine,ENDING_STATES,dao,task_them_os} from '../lib';
+import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler} from '../lib';
+import {RandoEngine,ENDING_STATES,task_them_os} from '../lib';
 
 export interface BasicTaskInfo{
     _id:string;
@@ -16,6 +16,9 @@ export class TaskManager{
     private static changeHandlerRegistry:{[key:string]:StateChangeHandler}={};
     private static activeTask:Record<string,BasicTaskInfo>={};
     private static pausedTask:Record<string,BasicTaskInfo>={};
+    private static getTaskStatusMap:Record<string,Function>={};
+
+    private static taskThemClearResolverFunc:Function;
 
     /**
      * 
@@ -64,6 +67,15 @@ export class TaskManager{
                                 console.error(e);
                                 return await this.change_task_state(t._id,"FAILED");
                             }
+                        }break;
+                        case TaskSchedulerMessage.TASK_STATUS:{
+                            const t:TaskRunnerEntry = e.data.data;
+                            this.getTaskStatusMap[t._id](t);
+                        }break;
+                        case TaskSchedulerMessage.CLEAR_TASK_THEM:{
+                            await this.taskThemClearResolverFunc(e.data.data);
+                            //@ts-ignore
+                            this.taskThemClearResolverFunc=undefined;
                         }
                     }
             };
@@ -127,16 +139,32 @@ export class TaskManager{
      * Gets current task status
      * @param task_id 
      */
-    public static async getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
-        return await dao.read(task_them_os,task_id);
+    public static getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
+        return new Promise<TaskRunnerEntry>(res=>{
+            this.worker.postMessage({type:TaskManagerMessage.GET_TASK_STATUS, data:{task_id}});
+            this.getTaskStatusMap[task_id]=res;
+        });
     }
 
-    /**
-     * If you want to run some advanced query on TaskDB than this DAO can help.
-     */
-    static get tsDAO():DAO{
-        return dao;
+    
+    public static clearTaskThem(clearTaskRegistry:boolean=false){
+        this.activeTask={};
+        this.pausedTask={};
+        if(clearTaskRegistry){
+            this.taskRegistry={};
+        }
+        return new Promise<boolean>(res=>{
+            this.taskThemClearResolverFunc=res;
+            this.worker.postMessage({type:TaskManagerMessage.CLEAR_TASK_THEM});
+        });
     }
+
+    // /**
+    //  * If you want to run some advanced query on TaskDB than this DAO can help.
+    //  */
+    // static get tsDAO():DAO{
+    //     return dao;
+    // }
 
     private  static async change_task_state(task_id:string, state: TASK_STATE){
         this.worker.postMessage({type:TaskManagerMessage.CHANGE_TASK_STATE, data: {task_id,state}});
