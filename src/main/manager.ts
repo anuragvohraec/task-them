@@ -34,11 +34,11 @@ export class TaskManager{
     static registerTaskClass(taskClass: typeof Task, task_name?:string,actOnPhaseChange?:ActOnPhaseChange){
         if(!task_name){
             task_name=taskClass.name;
-            if(actOnPhaseChange){
-                this.taskActionOnPhaseChangeReg[task_name]=actOnPhaseChange;
-            }
         }
         this.taskRegistry[task_name]=taskClass;
+        if(task_name && actOnPhaseChange){
+            this.taskActionOnPhaseChangeReg[task_name]=actOnPhaseChange;
+        }
     }
 
     /**
