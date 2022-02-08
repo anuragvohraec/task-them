@@ -1,4 +1,4 @@
-import {ENDING_STATES,DAO, TASK_THEM_DB, task_them_os} from '../lib';
+import {ENDING_STATES,DAO, TASK_THEM_DB, task_them_os, PhaseChangeData} from '../lib';
 import { TaskRunnerEntry, TASK_BEHAVIOR, TASK_STATE, UpdateLogs, TaskManagerMessage, TaskSchedulerMessage,task_them_os as dbname } from '../lib';
 
 const dao:DAO = new DAO(TASK_THEM_DB,1,[{name:task_them_os,primaryKeyName:"_id",indexes:["task_name","ended","created_date","updated_date"]}]);
@@ -91,6 +91,13 @@ class TaskScheduler{
                                 oldObject.state="CONTINUE";
                                 oldObject.phase=new_phase;
                                 oldObject.phase_data=new_phase_data;
+                                
+                                const phaseChangeData:PhaseChangeData={
+                                    task_name:oldObject.task_name,
+                                    new_phase,
+                                    new_phase_data
+                                };
+                                postMessage({type:TaskSchedulerMessage.PHASE_CHANGE, data:phaseChangeData});
 
                                 return oldObject;
                             });

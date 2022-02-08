@@ -91,3 +91,8 @@ export interface TaskRunnerEntry{
 }
 
 export interface UpdateLogs{[date:number]:string}
+
+
+export interface PhaseChangeData{
+    task_name:string, new_phase:string, new_phase_data?:any
+}

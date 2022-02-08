@@ -1,5 +1,5 @@
 import { Task } from "./task";
-import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler} from '../lib';
+import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler, PhaseChangeData} from '../lib';
 import {RandoEngine,ENDING_STATES,task_them_os} from '../lib';
 
 export interface BasicTaskInfo{
@@ -9,8 +9,14 @@ export interface BasicTaskInfo{
     state: TASK_STATE;
 }
 
+export interface ActOnPhaseChange{
+    (phaseChangeData:PhaseChangeData):void
+}
+
 export class TaskManager{
     private static taskRegistry:{[task_name:string]:typeof Task}={};
+    private static taskActionOnPhaseChangeReg:Record<string,ActOnPhaseChange>={};
+    
     private static initCalled=false;
     private static worker:Worker;
     private static changeHandlerRegistry:{[key:string]:StateChangeHandler}={};
@@ -25,9 +31,12 @@ export class TaskManager{
      * @param taskClass 
      * @param task_name : Default value will be Class.name 
      */
-    static registerTaskClass(taskClass: typeof Task, task_name?:string){
+    static registerTaskClass(taskClass: typeof Task, task_name?:string,actOnPhaseChange?:ActOnPhaseChange){
         if(!task_name){
             task_name=taskClass.name;
+            if(actOnPhaseChange){
+                this.taskActionOnPhaseChangeReg[task_name]=actOnPhaseChange;
+            }
         }
         this.taskRegistry[task_name]=taskClass;
     }
@@ -44,6 +53,15 @@ export class TaskManager{
             this.worker = new Worker(scheduler_worker_stringUrl);
             this.worker.onmessage=async(e)=>{
                     switch(e.data.type){
+                        case TaskSchedulerMessage.PHASE_CHANGE:{
+                            const t:PhaseChangeData = e.data.data;
+                            try{
+                                const actionOnPhaseChange=this.taskActionOnPhaseChangeReg[t.task_name];
+                                actionOnPhaseChange?.(t);
+                            }catch(e){
+                                console.error(`[TASK-THEM] throws error in actionOnPhaseChange function`);
+                            }
+                        }break;
                         case TaskSchedulerMessage.RUN_TASK:{
                             const t:TaskRunnerEntry = e.data.data;
                             const task_name = t.task_name;
