@@ -155,7 +155,7 @@ class TaskScheduler{
                             //check if task is ended
                             const {task_id}=data;
                             const te:TaskRunnerEntry = await dao.read(dbname,task_id);
-                            if(te && !te.ended){
+                            if(te && te.ended!=="true"){
                                 postMessage({type:TaskSchedulerMessage.RUN_TASK, data:te});
                             }
                         }break;
