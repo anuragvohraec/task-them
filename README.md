@@ -58,6 +58,9 @@ theme monospace
 3. To build index.js, run : `npx rollup -c rollup.config.js` , let it give all errors
 
 ## versions
+### "version": "7.0.0"
+1. Remove web workers as the task them can be added in a web-worker on gui side
+
 ### "version": "5.0.6"
 1. Manager.clearTaskThem function added to clear taskthem completely
 

@@ -1,12 +1,11 @@
 {
   "name": "task-them",
-  "version": "6.0.2",
+  "version": "7.0.0",
   "description": "Helps in creating/managing persistent task, which saves their state and resumes their state upon start.",
-  "main": "dist/main/index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "prepublish": "rm -rf dist/ && tsc --build src/main && webpack",
-    "build": "rm -rf dist/ && tsc --build src/main",
-    "bundle": "webpack"
+    "prepublish": "rm -rf dist/ && tsc --build src",
+    "build": "rm -rf dist/ && tsc --build src"
   },
   "repository": {
     "type": "git",

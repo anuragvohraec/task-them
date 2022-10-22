@@ -1,6 +1,6 @@
 import { Task } from "./task";
-import {TaskManagerMessage, TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler, PhaseChangeData} from '../lib';
-import {RandoEngine,ENDING_STATES,task_them_os} from '../lib';
+import { TaskRunnerEntry, TaskSchedulerMessage, TASK_BEHAVIOR, TASK_STATE, StateChangeHandler, PhaseChangeData, DAO, TASK_THEM_DB, UpdateLogs} from '../lib';
+import {RandoEngine,ENDING_STATES,task_them_os as dbname} from '../lib';
 
 export interface BasicTaskInfo{
     _id:string;
@@ -14,11 +14,12 @@ export interface ActOnPhaseChange{
 }
 
 export class TaskManager{
+    private static dao:DAO = new DAO(TASK_THEM_DB,1,[{name:dbname,primaryKeyName:"_id",indexes:["task_name","ended","created_date","updated_date"]}]);
+
     private static taskRegistry:{[task_name:string]:typeof Task}={};
     private static taskActionOnPhaseChangeReg:Record<string,ActOnPhaseChange>={};
     
-    private static initCalled=false;
-    private static worker:Worker;
+    
     private static changeHandlerRegistry:{[key:string]:StateChangeHandler}={};
     private static activeTask:Record<string,BasicTaskInfo>={};
     private static pausedTask:Record<string,BasicTaskInfo>={};
@@ -45,61 +46,92 @@ export class TaskManager{
      * All task classes must be registered prior to calling this function.
      * All which are registered after this will not be picked.
      * This function will only work once. that is even if you call init again, it will not have no effect.
-     * @param scheduler_worker_stringUrl 
      * @param archive_ended_task_before : if -1 then it will do no archiving, else it will archive all ended task before this time. Since Unix Epoch time
      */
-    static init(scheduler_worker_stringUrl: string | URL="task-runner-ww.js",archive_ended_task_before:number=-1){
-        if(!this.initCalled){
-            this.worker = new Worker(scheduler_worker_stringUrl);
-            this.worker.onmessage=async(e)=>{
-                    switch(e.data.type){
-                        case TaskSchedulerMessage.PHASE_CHANGE:{
-                            const t:PhaseChangeData = e.data.data;
-                            try{
-                                const actionOnPhaseChange=this.taskActionOnPhaseChangeReg[t.task_name];
-                                actionOnPhaseChange?.(t);
-                            }catch(e){
-                                console.error(`[TASK-THEM] throws error in actionOnPhaseChange function`);
-                            }
-                        }break;
-                        case TaskSchedulerMessage.RUN_TASK:{
-                            const t:TaskRunnerEntry = e.data.data;
-                            const task_name = t.task_name;
-                            this.activeTask[t._id]={...t};
-                            delete this.pausedTask[t._id];
-                            try{
-                                if(!this.taskRegistry[task_name]){
-                                    console.warn(`No such tasks!: ${task_name}`);
-                                }else{
-                                    const task:Task = Reflect.construct(this.taskRegistry[task_name],[]);
-                                    const p = await task._execute(t._id,t.task_name,t.task_desc,t.state,t.phase,t.phase_data);
-                                    if(ENDING_STATES.has(p)){
-                                        delete this.activeTask[t._id];
-                                    }else{
-                                        this.pausedTask[t._id]={...t,state:p};
-                                    }
-                                    await this.change_task_state(t._id,p);
-                                }
-                            }catch(e){
-                                console.warn(`Very bad Task ${task_name}! Your must catch all your exception in your run method!`);
-                                console.error(e);
-                                return await this.change_task_state(t._id,"FAILED");
-                            }
-                        }break;
-                        case TaskSchedulerMessage.TASK_STATUS:{
-                            const t:TaskRunnerEntry = e.data.data;
-                            this.getTaskStatusMap[t._id](t);
-                        }break;
-                        case TaskSchedulerMessage.CLEAR_TASK_THEM:{
-                            await this.taskThemClearResolverFunc(e.data.data);
-                            //@ts-ignore
-                            this.taskThemClearResolverFunc=undefined;
+    static init(archive_ended_task_before:number=-1){
+        return this.runOldAndArchivedEndedTaskBefore(archive_ended_task_before);
+    }
+
+    private static async handleTaskSchedulerMessages(type:TaskSchedulerMessage,data:any){
+        switch(type){
+            case TaskSchedulerMessage.PHASE_CHANGE:{
+                const t:PhaseChangeData =data;
+                try{
+                    const actionOnPhaseChange=this.taskActionOnPhaseChangeReg[t.task_name];
+                    actionOnPhaseChange?.(t);
+                }catch(e){
+                    console.error(`[TASK-THEM] throws error in actionOnPhaseChange function`);
+                }
+            }break;
+            case TaskSchedulerMessage.RUN_TASK:{
+                const t:TaskRunnerEntry = data;
+                const task_name = t.task_name;
+                this.activeTask[t._id]={...t};
+                delete this.pausedTask[t._id];
+                try{
+                    if(!this.taskRegistry[task_name]){
+                        console.warn(`No such tasks!: ${task_name}`);
+                    }else{
+                        const task:Task = Reflect.construct(this.taskRegistry[task_name],[]);
+                        const p = await task._execute(t._id,t.task_name,t.task_desc,t.state,t.phase,t.phase_data);
+                        if(ENDING_STATES.has(p)){
+                            delete this.activeTask[t._id];
+                        }else{
+                            delete this.activeTask[t._id];
+                            this.pausedTask[t._id]={...t,state:p};
                         }
+                        await this.change_task_state(t._id,p);
                     }
-            };
-            this.worker.postMessage({type:TaskManagerMessage.INIT_WEBWORKER, archive_ended_task_before});
-            this.initCalled=true;
+                }catch(e){
+                    console.warn(`Very bad Task ${task_name}! Your must catch all your exception in your run method!`);
+                    console.error(e);
+                    return await this.change_task_state(t._id,"FAILED");
+                }
+            }break;
+            case TaskSchedulerMessage.TASK_STATUS:{
+                const t:TaskRunnerEntry = data;
+                this.getTaskStatusMap[t._id](t);
+            }break;
+            case TaskSchedulerMessage.CLEAR_TASK_THEM:{
+                await this.taskThemClearResolverFunc(data);
+                //@ts-ignore
+                this.taskThemClearResolverFunc=undefined;
+            }
         }
+    }
+
+    /**
+     * runs task which were incomplete before now.
+     * And archive task which are no longer runnable.
+     * @param archive_ended_task_before 
+     */
+    private static async runOldAndArchivedEndedTaskBefore(archive_ended_task_before:number){
+         //query database for all task where ended=false and 
+         const found_net: TaskRunnerEntry[]=await this.dao.find(dbname,"ended","false");
+         if(found_net.length>0){
+             found_net.sort((a,b)=>{
+                 return a.created_date-b.created_date;
+             })
+             for(let te of found_net){
+                 await this.handleTaskSchedulerMessages(TaskSchedulerMessage.RUN_TASK,te);
+             }
+         }
+ 
+         //deleting ended task before the given date
+         if(archive_ended_task_before>-1){
+             const found_et: TaskRunnerEntry[] = await this.dao.find(dbname,"ended","true");
+             if(found_et.length>0){
+                 found_et.sort((a,b)=>{
+                     return a.created_date-b.created_date;
+                 });
+                 for(let et of found_et){
+                     if(et.created_date<=archive_ended_task_before){
+                         //lets delete them
+                         await this.dao.delete(dbname,et._id);
+                     }
+                 }
+             }
+         }
     }
 
     /**
@@ -144,12 +176,15 @@ export class TaskManager{
      * One can implement a continues progress detector using isTaskActive, isTaskPaused and runAPausedTask.
      * @param task_id 
      */
-    public static runAPausedTask(task_id:string,stateChangeHandler?:StateChangeHandler){
+    public static async runAPausedTask(task_id:string,stateChangeHandler?:StateChangeHandler){
         if(this.pausedTask[task_id]){
             if(stateChangeHandler){
                 this.changeHandlerRegistry[task_id]=stateChangeHandler;
             }
-            this.worker.postMessage({type:TaskManagerMessage.RUN_A_TASK, data:{task_id}});
+            const te:TaskRunnerEntry = await this.dao.read(dbname,task_id);
+            if(te && te.ended!=="true"){
+                return await this.handleTaskSchedulerMessages(TaskSchedulerMessage.RUN_TASK,te);
+            }
         }
     }
 
@@ -157,10 +192,11 @@ export class TaskManager{
      * Gets current task status
      * @param task_id 
      */
-    public static getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
-        return new Promise<TaskRunnerEntry>(res=>{
-            this.worker.postMessage({type:TaskManagerMessage.GET_TASK_STATUS, data:{task_id}});
+    public static async getTaskStatus(task_id:string):Promise<TaskRunnerEntry>{
+        let te:TaskRunnerEntry = await this.dao.read(dbname,task_id);
+        return await new Promise<TaskRunnerEntry>(res=>{
             this.getTaskStatusMap[task_id]=res;
+            this.handleTaskSchedulerMessages(TaskSchedulerMessage.TASK_STATUS,te);
         });
     }
 
@@ -173,7 +209,15 @@ export class TaskManager{
         }
         return new Promise<boolean>(res=>{
             this.taskThemClearResolverFunc=res;
-            this.worker.postMessage({type:TaskManagerMessage.CLEAR_TASK_THEM});
+
+            this.dao.cleanAllObjectStores().then(e=>{
+                if(e){
+                    this.handleTaskSchedulerMessages(TaskSchedulerMessage.CLEAR_TASK_THEM,true);
+                }else{
+                    this.handleTaskSchedulerMessages(TaskSchedulerMessage.CLEAR_TASK_THEM,false);
+                }
+                
+            });
         });
     }
 
@@ -185,7 +229,26 @@ export class TaskManager{
     // }
 
     private  static async change_task_state(task_id:string, state: TASK_STATE){
-        this.worker.postMessage({type:TaskManagerMessage.CHANGE_TASK_STATE, data: {task_id,state}});
+        const new_state: TASK_STATE = state;
+        await this.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
+            if(ENDING_STATES.has(new_state)){
+                oldObject.ended="true";
+            }
+            
+            const now = new Date().getTime();
+            oldObject.updated_date=now;
+            oldObject.updates_logs[now]=`STATE CHANGED: ${new_state} , from: <${oldObject.state}>`;
+            
+            if(new_state==="INIT"){
+                const old_phase=oldObject.phase;
+                oldObject.phase=oldObject.init_phase;
+                oldObject.phase_data=oldObject.init_phase_data;
+                oldObject.updates_logs[now+1]=`PHASE CHANGED: ${oldObject.init_phase} , from: <${old_phase}>`;
+            }
+            oldObject.state=new_state;
+
+            return oldObject;
+        });
         try{
             const stateChangeHandler = this.changeHandlerRegistry[task_id];
             //@ts-ignore
@@ -205,8 +268,28 @@ export class TaskManager{
      * @param phase 
      * @param phase_data 
      */
-    static change_task_phase(task_id:string, phase:string, phase_data?:any){
-        this.worker.postMessage({type: TaskManagerMessage.CHANGE_TASK_PHASE,data:{task_id,phase,phase_data}});
+    static async change_task_phase(task_id:string, phase:string, phase_data?:any){
+        
+        const te = await this.getTaskStatus(task_id);
+        const new_phase: string = phase;
+        const new_phase_data:any = phase_data;
+
+        await this.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
+            const now = new Date().getTime();
+            oldObject.updated_date=now;
+            oldObject.updates_logs[now]=`PHASE CHANGED: ${new_phase} , from: <${oldObject.phase}>`;
+            oldObject.state="CONTINUE";
+            oldObject.phase=new_phase;
+            oldObject.phase_data=new_phase_data;
+            return oldObject;
+        });
+
+        const phaseChangeData:PhaseChangeData={
+            task_name:te.task_name,
+            new_phase,
+            new_phase_data
+        };
+        return await this.handleTaskSchedulerMessages(TaskSchedulerMessage.PHASE_CHANGE,phaseChangeData);
     }
 
     /**
@@ -229,9 +312,51 @@ export class TaskManager{
         if(task_info.stateChangeHandler){
             this.changeHandlerRegistry[_id]=task_info.stateChangeHandler;
         }
-        this.worker.postMessage({type: TaskManagerMessage.CREATE_TASK,data:{_id, task_name:task_info.task_name, 
-            task_desc:task_info.task_desc, init_phase:task_info.init_phase,
-            init_phase_data: task_info.init_phase_data,behaves}});
+        // this.worker.postMessage({type: TaskManagerMessage.CREATE_TASK,data:{_id, task_name:task_info.task_name, 
+        //     task_desc:task_info.task_desc, init_phase:task_info.init_phase,
+        //     init_phase_data: task_info.init_phase_data,behaves}});
+        const task_name:string= task_info.task_name;
+        if(behaves === "ONLY_ONCE_IN_LIFE"){
+            //check if once such task is already present in DB.
+            const found_entries = await this.dao.find(dbname,"task_name",task_name);
+            if(found_entries.length>0){
+                return;
+            }
+        }else if(behaves === "ONLY_ONE_ACTIVE_IN_QUEUE"){
+            const found_entries = await this.dao.find<{name:string}>(dbname,"ended","false");
+            if(found_entries.length>0){
+                //lets search if queue already have one active member of this
+                let f = found_entries.filter(e=>e.name===task_name);
+                if(f.length>0){
+                    return;
+                }
+            }
+        }
+        const task_desc:string = task_info.task_desc;
+        const init_phase:string=task_info.init_phase;
+        const init_phase_data:String=task_info.init_phase_data;
+        
+
+        const now = new Date().getTime();
+        const updates_logs:UpdateLogs={};
+        updates_logs[now]="STATE CHANGED: INIT";
+        updates_logs[now+1]=`PHASE CHANGED: ${init_phase}`;
+
+        const te: TaskRunnerEntry={
+            task_name,task_desc,init_phase,init_phase_data,behaves,
+            _id,
+            created_date:now,
+            phase:init_phase,
+            phase_data:init_phase_data,
+            state:"INIT",
+            ended:"false",
+            updated_date:now,
+            updates_logs
+        }
+
+        if(await this.dao.create(dbname,te)){
+            await this.handleTaskSchedulerMessages(TaskSchedulerMessage.RUN_TASK,te);
+        }
         return _id;
     }
 

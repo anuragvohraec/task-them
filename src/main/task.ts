@@ -48,6 +48,6 @@ export abstract class Task{
      * @param new_phase_data 
      */
     record_phase_change(new_phase:string, new_phase_data?:any){
-        TaskManager.change_task_phase(this._id!,new_phase,new_phase_data);
+        return TaskManager.change_task_phase(this._id!,new_phase,new_phase_data);
     }
 }
