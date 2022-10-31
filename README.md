@@ -58,6 +58,10 @@ theme monospace
 3. To build index.js, run : `npx rollup -c rollup.config.js` , let it give all errors
 
 ## versions
+### "version": "7.0.1"
+1. Added `addLog` method in a task, to add custom logs of what has happened
+2. Added `name` property in task, so during debugging its easy to deduce which class is in action.
+
 ### "version": "7.0.0"
 1. Remove web workers as the task them can be added in a web-worker on gui side
 

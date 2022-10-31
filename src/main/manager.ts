@@ -263,6 +263,20 @@ export class TaskManager{
     }
 
     /**
+     * To be called only inside task runner
+     * @param task_id 
+     * @param details 
+     */
+    static async addLog(task_id:string,details:string){
+        return await this.dao.update(dbname,task_id,(oldObject:TaskRunnerEntry)=>{
+            const now = new Date().getTime();
+            oldObject.updated_date=now;
+            oldObject.updates_logs[now]=details;
+            return oldObject;
+        });
+    }
+
+    /**
      * Is sparingly used separately. In run change_phase method is available. But this method can be helpful in some special case.
      * @param task_id 
      * @param phase 

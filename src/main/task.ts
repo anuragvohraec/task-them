@@ -11,6 +11,8 @@ export abstract class Task{
     
     protected _id?:string;
 
+    protected name?:string;
+
     static get behavior() : string {
         return this.behaves;
     }
@@ -27,6 +29,7 @@ export abstract class Task{
      */
     _execute(_id:string, task_name:string,task_desc:string, state:TASK_STATE, phase:string, phase_data:any):Promise<TASK_STATE>{
         this._id=_id;
+        this.name=task_name;
         return this.run(task_name,task_desc,state,phase,phase_data);
     }
 
@@ -49,5 +52,9 @@ export abstract class Task{
      */
     record_phase_change(new_phase:string, new_phase_data?:any){
         return TaskManager.change_task_phase(this._id!,new_phase,new_phase_data);
+    }
+
+    addLog(details:string){
+        return TaskManager.addLog(this._id!,details);
     }
 }
