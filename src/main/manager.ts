@@ -107,11 +107,11 @@ export class TaskManager{
      */
     private static async runOldAndArchivedEndedTaskBefore(archive_ended_task_before:number){
          //query database for all task where ended=false and 
-         const found_net: TaskRunnerEntry[]=await this.dao.find(dbname,"ended","false");
+         const found_net: TaskRunnerEntry[]=await this.dao.findNotEndedTask(dbname);
          if(found_net.length>0){
-             found_net.sort((a,b)=>{
-                 return a.created_date-b.created_date;
-             })
+            //  found_net.sort((a,b)=>{
+            //      return a.created_date-b.created_date;
+            //  })
              for(let te of found_net){
                  await this.handleTaskSchedulerMessages(TaskSchedulerMessage.RUN_TASK,te);
              }

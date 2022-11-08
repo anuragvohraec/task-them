@@ -363,6 +363,35 @@ export class DAO {
         return result;
     }
 
+    async findNotEndedTask<T>(dbname:string){
+        const result:T[]=[];
+        if(await this.isInitialized){
+            const os= this.db.transaction([dbname],'readonly').objectStore(dbname);
+            const index = os.index("created_date");
+            if(index){
+                const range = IDBKeyRange.lowerBound(0);
+                await new Promise<void>(res=>{
+                    index.openCursor(range).onsuccess=(e)=>{
+                        //@ts-ignore
+                        const cursor: IDBCursor = e.target.result;
+                        if(cursor){
+                            //@ts-ignore
+                            let v = cursor.value as any;
+                            if(v.ended==="false"){
+                                //@ts-ignore
+                                result.push(cursor.value);
+                                cursor.continue();
+                            }
+                        }else{
+                            res();
+                        }
+                    }
+                });
+            }
+        }
+        return result;
+    }
+
 
 }
 
